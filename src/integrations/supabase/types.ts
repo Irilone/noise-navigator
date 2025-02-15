@@ -51,27 +51,27 @@ export type Database = {
         }
         Relationships: []
       }
-      todos: {
+      noise_data: {
         Row: {
-          completed: boolean | null
-          created_at: string
+          created_at: string | null
           description: string | null
-          id: string
-          title: string
+          file_url: string
+          id: number
+          user_id: string | null
         }
         Insert: {
-          completed?: boolean | null
-          created_at?: string
+          created_at?: string | null
           description?: string | null
-          id?: string
-          title: string
+          file_url: string
+          id?: never
+          user_id?: string | null
         }
         Update: {
-          completed?: boolean | null
-          created_at?: string
+          created_at?: string | null
           description?: string | null
-          id?: string
-          title?: string
+          file_url?: string
+          id?: never
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -80,6 +80,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      fetch_and_organize_noise_data: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       process_noise_data: {
         Args: {
           industry_id: string
