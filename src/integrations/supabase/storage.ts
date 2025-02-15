@@ -2,7 +2,7 @@
 import { supabase } from "./client";
 
 // Initialize storage bucket for noise data
-export const noiseDataBucket = supabase.storage.from('noise-data');
+export const noiseDataBucket = supabase.storage.from('lovable');
 
 // Helper function to handle file uploads
 export async function uploadNoiseData(file: File) {
