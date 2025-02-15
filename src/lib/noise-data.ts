@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { noiseDataBucket } from "@/integrations/supabase/storage";
+import { noiseDataBucket, uploadNoiseData, downloadNoiseData } from "@/integrations/supabase/storage";
 
 interface ProcessNoiseDataParams {
   industryId: string;
