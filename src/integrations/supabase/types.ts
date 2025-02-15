@@ -84,6 +84,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      process_industries_from_storage: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       process_noise_data: {
         Args: {
           industry_id: string
