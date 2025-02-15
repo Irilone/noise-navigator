@@ -75,6 +75,45 @@ export type Database = {
         }
         Relationships: []
       }
+      techniques: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          impact_metrics: Json
+          implementation_steps: string[] | null
+          industries: string[]
+          name: string
+          source_references: Json | null
+          updated_at: string
+          validation_criteria: string[] | null
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          impact_metrics?: Json
+          implementation_steps?: string[] | null
+          industries?: string[]
+          name: string
+          source_references?: Json | null
+          updated_at?: string
+          validation_criteria?: string[] | null
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          impact_metrics?: Json
+          implementation_steps?: string[] | null
+          industries?: string[]
+          name?: string
+          source_references?: Json | null
+          updated_at?: string
+          validation_criteria?: string[] | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
