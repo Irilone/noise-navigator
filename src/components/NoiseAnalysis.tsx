@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card } from "@/components/ui/card";
@@ -17,6 +18,31 @@ interface Metric {
   value: number;
 }
 
+interface Checklist {
+  title: string;
+  description: string;
+  items: string[];
+}
+
+interface Technique {
+  description: string;
+  examples: string[];
+}
+
+interface ImpactMetric {
+  value: number;
+  metric: string;
+  description: string;
+}
+
+interface DecisionHygiene {
+  checklists: Checklist[];
+  techniques: {
+    [key: string]: Technique;
+  };
+  impact_metrics: ImpactMetric[];
+}
+
 const isMetricsArray = (metrics: unknown): metrics is Metric[] => {
   return Array.isArray(metrics) && metrics.every(metric => 
     typeof metric === 'object' && 
@@ -25,6 +51,16 @@ const isMetricsArray = (metrics: unknown): metrics is Metric[] => {
     'value' in metric &&
     typeof metric.name === 'string' &&
     typeof metric.value === 'number'
+  );
+};
+
+const isDecisionHygiene = (value: unknown): value is DecisionHygiene => {
+  if (typeof value !== 'object' || value === null) return false;
+  const hygiene = value as any;
+  return (
+    Array.isArray(hygiene.checklists) &&
+    typeof hygiene.techniques === 'object' &&
+    Array.isArray(hygiene.impact_metrics)
   );
 };
 
@@ -82,7 +118,9 @@ const NoiseAnalysis = () => {
 
   const currentIndustry = industries?.find(i => i.industry_id === selectedIndustryId);
   const metrics = getAggregatedMetrics();
-  const decision_hygiene = currentIndustry?.decision_hygiene || {};
+  const decision_hygiene = isDecisionHygiene(currentIndustry?.decision_hygiene) 
+    ? currentIndustry.decision_hygiene 
+    : { checklists: [], techniques: {}, impact_metrics: [] };
 
   if (error) {
     return <div className="w-full max-w-4xl mx-auto p-6">Error loading data</div>;
@@ -240,7 +278,7 @@ const NoiseAnalysis = () => {
 
               <TabsContent value="checklists" className="space-y-4">
                 <Accordion type="single" collapsible className="w-full">
-                  {(decision_hygiene.checklists as any[] || []).map((checklist: any, index: number) => (
+                  {decision_hygiene.checklists.map((checklist, index) => (
                     <AccordionItem key={index} value={`checklist-${index}`}>
                       <AccordionTrigger className="text-left">
                         <div className="flex items-center space-x-2">
@@ -252,7 +290,7 @@ const NoiseAnalysis = () => {
                         <div className="space-y-2 p-4">
                           <p className="text-sm text-muted-foreground mb-2">{checklist.description}</p>
                           <ul className="space-y-2">
-                            {checklist.items.map((item: string, itemIndex: number) => (
+                            {checklist.items.map((item, itemIndex) => (
                               <li key={itemIndex} className="flex items-start text-sm">
                                 <span className="mr-2">•</span>
                                 <span>{item}</span>
@@ -268,13 +306,13 @@ const NoiseAnalysis = () => {
 
               <TabsContent value="techniques" className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {Object.entries(decision_hygiene.techniques || {}).map(([key, technique]: [string, any]) => (
+                  {Object.entries(decision_hygiene.techniques).map(([key, technique]) => (
                     <Card key={key} className="p-4">
                       <h4 className="font-medium mb-2">{key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</h4>
                       <p className="text-sm text-muted-foreground">{technique.description}</p>
                       {technique.examples?.length > 0 && (
                         <ul className="mt-2 space-y-1">
-                          {technique.examples.map((example: string, index: number) => (
+                          {technique.examples.map((example, index) => (
                             <li key={index} className="text-sm">• {example}</li>
                           ))}
                         </ul>
@@ -286,7 +324,7 @@ const NoiseAnalysis = () => {
 
               <TabsContent value="impact" className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {(decision_hygiene.impact_metrics as any[] || []).map((impact: any, index: number) => (
+                  {decision_hygiene.impact_metrics.map((impact, index) => (
                     <Card key={index} className="p-4">
                       <div className="text-center">
                         <div className="text-2xl font-bold">{impact.value}%</div>
