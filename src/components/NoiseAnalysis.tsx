@@ -14,7 +14,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 type IndustryInsight = Database['public']['Tables']['industry_insights']['Row'];
 
 const NoiseAnalysis = () => {
-  const [selectedIndustryId, setSelectedIndustryId] = useState<string>('legal');
+  const [selectedIndustryId, setSelectedIndustryId] = useState<string>('all');
   const [selectedMetricView, setSelectedMetricView] = useState<'bar' | 'line'>('bar');
 
   const { data: industries, isLoading, error } = useQuery({
@@ -35,8 +35,36 @@ const NoiseAnalysis = () => {
     }
   });
 
+  // If "all" is selected, combine metrics from all industries
+  const getAggregatedMetrics = () => {
+    if (!industries || selectedIndustryId !== 'all') {
+      return currentIndustry?.metrics || [];
+    }
+
+    const allMetrics: { [key: string]: number } = {};
+    let metricCounts: { [key: string]: number } = {};
+
+    industries.forEach(industry => {
+      if (Array.isArray(industry.metrics)) {
+        industry.metrics.forEach(metric => {
+          if (!allMetrics[metric.name]) {
+            allMetrics[metric.name] = 0;
+            metricCounts[metric.name] = 0;
+          }
+          allMetrics[metric.name] += metric.value;
+          metricCounts[metric.name]++;
+        });
+      }
+    });
+
+    return Object.entries(allMetrics).map(([name, value]) => ({
+      name,
+      value: Math.round(value / metricCounts[name])
+    }));
+  };
+
   const currentIndustry = industries?.find(i => i.industry_id === selectedIndustryId);
-  const metrics = Array.isArray(currentIndustry?.metrics) ? currentIndustry.metrics : [];
+  const metrics = selectedIndustryId === 'all' ? getAggregatedMetrics() : (Array.isArray(currentIndustry?.metrics) ? currentIndustry.metrics : []);
   const decision_hygiene = currentIndustry?.decision_hygiene as any || {};
 
   if (error) {
@@ -118,6 +146,7 @@ const NoiseAnalysis = () => {
                 <SelectValue placeholder="Select an industry" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">All Industries</SelectItem>
                 {industries?.map((industry) => (
                   <SelectItem key={industry.industry_id} value={industry.industry_id}>
                     {industry.name}
@@ -129,10 +158,12 @@ const NoiseAnalysis = () => {
 
           <div className="pt-4">
             <h3 className="text-lg font-semibold mb-2">
-              {currentIndustry?.name} Industry Analysis
+              {selectedIndustryId === 'all' ? 'Cross-Industry' : currentIndustry?.name} Analysis
             </h3>
             <p className="text-muted-foreground">
-              {currentIndustry?.description}
+              {selectedIndustryId === 'all' 
+                ? 'Aggregated analysis across all industries'
+                : currentIndustry?.description}
             </p>
           </div>
         </div>
@@ -163,89 +194,95 @@ const NoiseAnalysis = () => {
         </Card>
 
         <Card className="p-6 card-hover">
-          <h3 className="text-lg font-semibold mb-4">Real World Examples</h3>
+          <h3 className="text-lg font-semibold mb-4">Key Findings</h3>
           <div className="space-y-4">
-            {currentIndustry?.key_findings?.map((finding, index) => (
-              <div key={index} className="p-4 bg-secondary/10 rounded-lg">
-                <p className="text-sm text-muted-foreground">
-                  <span className="mr-2">📋</span>
-                  {finding}
-                </p>
-              </div>
-            ))}
+            {selectedIndustryId === 'all' ? (
+              <p className="text-muted-foreground">Select a specific industry to view detailed findings.</p>
+            ) : (
+              currentIndustry?.key_findings?.map((finding, index) => (
+                <div key={index} className="p-4 bg-secondary/10 rounded-lg">
+                  <p className="text-sm text-muted-foreground">
+                    <span className="mr-2">📋</span>
+                    {finding}
+                  </p>
+                </div>
+              ))
+            )}
           </div>
         </Card>
 
-        <Card className="p-6 card-hover col-span-2">
-          <h3 className="text-lg font-semibold mb-4">Decision Hygiene Framework</h3>
-          <Tabs defaultValue="checklists" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="checklists">Checklists</TabsTrigger>
-              <TabsTrigger value="techniques">Techniques</TabsTrigger>
-              <TabsTrigger value="impact">Impact Metrics</TabsTrigger>
-            </TabsList>
+        {selectedIndustryId !== 'all' && (
+          <Card className="p-6 card-hover col-span-2">
+            <h3 className="text-lg font-semibold mb-4">Decision Hygiene Framework</h3>
+            <Tabs defaultValue="checklists" className="space-y-4">
+              <TabsList>
+                <TabsTrigger value="checklists">Checklists</TabsTrigger>
+                <TabsTrigger value="techniques">Techniques</TabsTrigger>
+                <TabsTrigger value="impact">Impact Metrics</TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="checklists" className="space-y-4">
-              <Accordion type="single" collapsible className="w-full">
-                {decision_hygiene?.checklists?.map((checklist: any, index: number) => (
-                  <AccordionItem key={index} value={`checklist-${index}`}>
-                    <AccordionTrigger className="text-left">
-                      <div className="flex items-center space-x-2">
-                        <span>{checklist.title}</span>
-                        <Info className="w-4 h-4 text-muted-foreground" />
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <div className="space-y-2 p-4">
-                        <p className="text-sm text-muted-foreground mb-2">{checklist.description}</p>
-                        <ul className="space-y-2">
-                          {checklist.items.map((item: string, itemIndex: number) => (
-                            <li key={itemIndex} className="flex items-start text-sm">
-                              <span className="mr-2">•</span>
-                              <span>{item}</span>
-                            </li>
+              <TabsContent value="checklists" className="space-y-4">
+                <Accordion type="single" collapsible className="w-full">
+                  {decision_hygiene?.checklists?.map((checklist: any, index: number) => (
+                    <AccordionItem key={index} value={`checklist-${index}`}>
+                      <AccordionTrigger className="text-left">
+                        <div className="flex items-center space-x-2">
+                          <span>{checklist.title}</span>
+                          <Info className="w-4 h-4 text-muted-foreground" />
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-2 p-4">
+                          <p className="text-sm text-muted-foreground mb-2">{checklist.description}</p>
+                          <ul className="space-y-2">
+                            {checklist.items.map((item: string, itemIndex: number) => (
+                              <li key={itemIndex} className="flex items-start text-sm">
+                                <span className="mr-2">•</span>
+                                <span>{item}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </TabsContent>
+
+              <TabsContent value="techniques" className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {Object.entries(decision_hygiene?.techniques || {}).map(([key, technique]: [string, any]) => (
+                    <Card key={key} className="p-4">
+                      <h4 className="font-medium mb-2">{key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</h4>
+                      <p className="text-sm text-muted-foreground">{technique.description}</p>
+                      {technique.examples?.length > 0 && (
+                        <ul className="mt-2 space-y-1">
+                          {technique.examples.map((example: string, index: number) => (
+                            <li key={index} className="text-sm">• {example}</li>
                           ))}
                         </ul>
+                      )}
+                    </Card>
+                  ))}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="impact" className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {decision_hygiene?.impact_metrics?.map((impact: any, index: number) => (
+                    <Card key={index} className="p-4">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold">{impact.value}%</div>
+                        <div className="text-sm font-medium">{impact.metric}</div>
+                        <div className="text-xs text-muted-foreground mt-1">{impact.description}</div>
                       </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            </TabsContent>
-
-            <TabsContent value="techniques" className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Object.entries(decision_hygiene?.techniques || {}).map(([key, technique]: [string, any]) => (
-                  <Card key={key} className="p-4">
-                    <h4 className="font-medium mb-2">{key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</h4>
-                    <p className="text-sm text-muted-foreground">{technique.description}</p>
-                    {technique.examples?.length > 0 && (
-                      <ul className="mt-2 space-y-1">
-                        {technique.examples.map((example: string, index: number) => (
-                          <li key={index} className="text-sm">• {example}</li>
-                        ))}
-                      </ul>
-                    )}
-                  </Card>
-                ))}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="impact" className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {decision_hygiene?.impact_metrics?.map((impact: any, index: number) => (
-                  <Card key={index} className="p-4">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold">{impact.value}%</div>
-                      <div className="text-sm font-medium">{impact.metric}</div>
-                      <div className="text-xs text-muted-foreground mt-1">{impact.description}</div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </TabsContent>
-          </Tabs>
-        </Card>
+                    </Card>
+                  ))}
+                </div>
+              </TabsContent>
+            </Tabs>
+          </Card>
+        )}
       </div>
     </div>
   );
