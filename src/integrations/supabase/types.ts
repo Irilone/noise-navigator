@@ -12,33 +12,39 @@ export type Database = {
       industry_insights: {
         Row: {
           created_at: string
+          data_sources: Json | null
           decision_hygiene: Json
           description: string | null
           id: string
           industry_id: string
           key_findings: string[]
+          last_processed: string | null
           metrics: Json
           name: string
           updated_at: string
         }
         Insert: {
           created_at?: string
+          data_sources?: Json | null
           decision_hygiene?: Json
           description?: string | null
           id?: string
           industry_id: string
           key_findings?: string[]
+          last_processed?: string | null
           metrics?: Json
           name: string
           updated_at?: string
         }
         Update: {
           created_at?: string
+          data_sources?: Json | null
           decision_hygiene?: Json
           description?: string | null
           id?: string
           industry_id?: string
           key_findings?: string[]
+          last_processed?: string | null
           metrics?: Json
           name?: string
           updated_at?: string
@@ -74,7 +80,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      process_noise_data: {
+        Args: {
+          industry_id: string
+          data_type: string
+          content: Json
+        }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never
