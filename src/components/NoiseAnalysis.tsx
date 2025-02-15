@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card } from "@/components/ui/card";
@@ -12,6 +11,22 @@ import { Info } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 type IndustryInsight = Database['public']['Tables']['industry_insights']['Row'];
+
+interface Metric {
+  name: string;
+  value: number;
+}
+
+const isMetricsArray = (metrics: unknown): metrics is Metric[] => {
+  return Array.isArray(metrics) && metrics.every(metric => 
+    typeof metric === 'object' && 
+    metric !== null &&
+    'name' in metric && 
+    'value' in metric &&
+    typeof metric.name === 'string' &&
+    typeof metric.value === 'number'
+  );
+};
 
 const NoiseAnalysis = () => {
   const [selectedIndustryId, setSelectedIndustryId] = useState<string>('all');
@@ -36,17 +51,19 @@ const NoiseAnalysis = () => {
   });
 
   // If "all" is selected, combine metrics from all industries
-  const getAggregatedMetrics = () => {
+  const getAggregatedMetrics = (): Metric[] => {
     if (!industries || selectedIndustryId !== 'all') {
-      return currentIndustry?.metrics || [];
+      const currentMetrics = currentIndustry?.metrics;
+      return isMetricsArray(currentMetrics) ? currentMetrics : [];
     }
 
     const allMetrics: { [key: string]: number } = {};
     let metricCounts: { [key: string]: number } = {};
 
     industries.forEach(industry => {
-      if (Array.isArray(industry.metrics)) {
-        industry.metrics.forEach(metric => {
+      const industryMetrics = industry.metrics;
+      if (isMetricsArray(industryMetrics)) {
+        industryMetrics.forEach(metric => {
           if (!allMetrics[metric.name]) {
             allMetrics[metric.name] = 0;
             metricCounts[metric.name] = 0;
@@ -64,8 +81,8 @@ const NoiseAnalysis = () => {
   };
 
   const currentIndustry = industries?.find(i => i.industry_id === selectedIndustryId);
-  const metrics = selectedIndustryId === 'all' ? getAggregatedMetrics() : (Array.isArray(currentIndustry?.metrics) ? currentIndustry.metrics : []);
-  const decision_hygiene = currentIndustry?.decision_hygiene as any || {};
+  const metrics = getAggregatedMetrics();
+  const decision_hygiene = currentIndustry?.decision_hygiene || {};
 
   if (error) {
     return <div className="w-full max-w-4xl mx-auto p-6">Error loading data</div>;
@@ -223,7 +240,7 @@ const NoiseAnalysis = () => {
 
               <TabsContent value="checklists" className="space-y-4">
                 <Accordion type="single" collapsible className="w-full">
-                  {decision_hygiene?.checklists?.map((checklist: any, index: number) => (
+                  {(decision_hygiene.checklists as any[] || []).map((checklist: any, index: number) => (
                     <AccordionItem key={index} value={`checklist-${index}`}>
                       <AccordionTrigger className="text-left">
                         <div className="flex items-center space-x-2">
@@ -251,7 +268,7 @@ const NoiseAnalysis = () => {
 
               <TabsContent value="techniques" className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {Object.entries(decision_hygiene?.techniques || {}).map(([key, technique]: [string, any]) => (
+                  {Object.entries(decision_hygiene.techniques || {}).map(([key, technique]: [string, any]) => (
                     <Card key={key} className="p-4">
                       <h4 className="font-medium mb-2">{key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</h4>
                       <p className="text-sm text-muted-foreground">{technique.description}</p>
@@ -269,7 +286,7 @@ const NoiseAnalysis = () => {
 
               <TabsContent value="impact" className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {decision_hygiene?.impact_metrics?.map((impact: any, index: number) => (
+                  {(decision_hygiene.impact_metrics as any[] || []).map((impact: any, index: number) => (
                     <Card key={index} className="p-4">
                       <div className="text-center">
                         <div className="text-2xl font-bold">{impact.value}%</div>
