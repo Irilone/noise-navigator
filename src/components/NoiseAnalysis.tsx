@@ -48,12 +48,33 @@ const NoiseAnalysis = () => {
   }
 
   const renderMetricsChart = () => {
-    const ChartComponent = selectedMetricView === 'bar' ? BarChart : LineChart;
-    const DataComponent = selectedMetricView === 'bar' ? Bar : Line;
+    if (selectedMetricView === 'bar') {
+      return (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={metrics} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" />
+            <YAxis />
+            <Tooltip content={({ active, payload, label }) => {
+              if (active && payload && payload.length) {
+                return (
+                  <div className="bg-background border p-2 rounded-lg shadow-lg">
+                    <p className="font-semibold">{label}</p>
+                    <p className="text-sm text-muted-foreground">Value: {payload[0].value}</p>
+                  </div>
+                );
+              }
+              return null;
+            }} />
+            <Bar dataKey="value" fill="#8884d8" />
+          </BarChart>
+        </ResponsiveContainer>
+      );
+    }
 
     return (
       <ResponsiveContainer width="100%" height="100%">
-        <ChartComponent data={metrics} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+        <LineChart data={metrics} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="name" />
           <YAxis />
@@ -68,8 +89,8 @@ const NoiseAnalysis = () => {
             }
             return null;
           }} />
-          <DataComponent dataKey="value" fill="#8884d8" stroke="#8884d8" />
-        </ChartComponent>
+          <Line type="monotone" dataKey="value" stroke="#8884d8" />
+        </LineChart>
       </ResponsiveContainer>
     );
   };
