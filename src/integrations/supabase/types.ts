@@ -9,6 +9,42 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      industry_insights: {
+        Row: {
+          created_at: string
+          decision_hygiene: Json
+          description: string | null
+          id: string
+          industry_id: string
+          key_findings: string[]
+          metrics: Json
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          decision_hygiene?: Json
+          description?: string | null
+          id?: string
+          industry_id: string
+          key_findings?: string[]
+          metrics?: Json
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          decision_hygiene?: Json
+          description?: string | null
+          id?: string
+          industry_id?: string
+          key_findings?: string[]
+          metrics?: Json
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       todos: {
         Row: {
           completed: boolean | null
