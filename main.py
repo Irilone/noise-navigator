@@ -1,6 +1,12 @@
 from langfuse.decorators import observe, langfuse_context
 import anthropic
  
+@observe()
+def fn():
+    langfuse_context.get_current_trace_url()
+ 
+fn()
+ 
 anthopic_client = anthropic.Anthropic()
  
 # Wrap LLM function with decorator
