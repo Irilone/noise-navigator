@@ -4,16 +4,19 @@ import { useQuery } from '@tanstack/react-query';
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Info } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 type IndustryInsight = Database['public']['Tables']['industry_insights']['Row'];
 
 const NoiseAnalysis = () => {
   const [selectedIndustryId, setSelectedIndustryId] = useState<string>('legal');
+  const [selectedMetricView, setSelectedMetricView] = useState<'bar' | 'line'>('bar');
 
-  // Fetch all industries with enhanced logging
   const { data: industries, isLoading, error } = useQuery({
     queryKey: ['industries'],
     queryFn: async () => {
@@ -32,20 +35,44 @@ const NoiseAnalysis = () => {
     }
   });
 
-  // Log current industry data for debugging
   const currentIndustry = industries?.find(i => i.industry_id === selectedIndustryId);
-  console.log('Current industry:', currentIndustry);
-
   const metrics = Array.isArray(currentIndustry?.metrics) ? currentIndustry.metrics : [];
+  const decision_hygiene = currentIndustry?.decision_hygiene as any || {};
 
   if (error) {
-    console.error('Error in NoiseAnalysis:', error);
     return <div className="w-full max-w-4xl mx-auto p-6">Error loading data</div>;
   }
 
   if (isLoading) {
     return <div className="w-full max-w-4xl mx-auto p-6">Loading...</div>;
   }
+
+  const renderMetricsChart = () => {
+    const ChartComponent = selectedMetricView === 'bar' ? BarChart : LineChart;
+    const DataComponent = selectedMetricView === 'bar' ? Bar : Line;
+
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <ChartComponent data={metrics} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" />
+          <YAxis />
+          <Tooltip content={({ active, payload, label }) => {
+            if (active && payload && payload.length) {
+              return (
+                <div className="bg-background border p-2 rounded-lg shadow-lg">
+                  <p className="font-semibold">{label}</p>
+                  <p className="text-sm text-muted-foreground">Value: {payload[0].value}</p>
+                </div>
+              );
+            }
+            return null;
+          }} />
+          <DataComponent dataKey="value" fill="#8884d8" stroke="#8884d8" />
+        </ChartComponent>
+      </ResponsiveContainer>
+    );
+  };
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-8 p-6">
@@ -92,75 +119,111 @@ const NoiseAnalysis = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="p-6 card-hover">
-          <h3 className="text-lg font-semibold mb-4">Noise Metrics</h3>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">Noise Metrics</h3>
+            <div className="flex space-x-2">
+              <button
+                className={`px-3 py-1 rounded ${selectedMetricView === 'bar' ? 'bg-primary text-white' : 'bg-secondary'}`}
+                onClick={() => setSelectedMetricView('bar')}
+              >
+                Bar
+              </button>
+              <button
+                className={`px-3 py-1 rounded ${selectedMetricView === 'line' ? 'bg-primary text-white' : 'bg-secondary'}`}
+                onClick={() => setSelectedMetricView('line')}
+              >
+                Line
+              </button>
+            </div>
+          </div>
           <div className="h-48">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={metrics} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="value" fill="#8884d8" />
-              </BarChart>
-            </ResponsiveContainer>
+            {renderMetricsChart()}
           </div>
         </Card>
 
         <Card className="p-6 card-hover">
-          <h3 className="text-lg font-semibold mb-4">Key Findings</h3>
-          <ul className="space-y-2 text-sm text-muted-foreground">
+          <h3 className="text-lg font-semibold mb-4">Real World Examples</h3>
+          <div className="space-y-4">
             {currentIndustry?.key_findings?.map((finding, index) => (
-              <li key={index} className="flex items-start">
-                <span className="mr-2">•</span>
-                <span>{finding}</span>
-              </li>
+              <div key={index} className="p-4 bg-secondary/10 rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  <span className="mr-2">📋</span>
+                  {finding}
+                </p>
+              </div>
             ))}
-          </ul>
+          </div>
         </Card>
 
         <Card className="p-6 card-hover col-span-2">
-          <h3 className="text-lg font-semibold mb-4">Decision Hygiene</h3>
-          <div className="space-y-6">
-            {(currentIndustry?.decision_hygiene as any)?.checklists?.map((checklist: any, index: number) => (
-              <div key={index} className="space-y-2">
-                <h4 className="font-medium">{checklist.title}</h4>
-                <ul className="space-y-2">
-                  {checklist.items.map((item: string, itemIndex: number) => (
-                    <li key={itemIndex} className="flex items-start text-sm text-muted-foreground">
-                      <span className="mr-2">•</span>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+          <h3 className="text-lg font-semibold mb-4">Decision Hygiene Framework</h3>
+          <Tabs defaultValue="checklists" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="checklists">Checklists</TabsTrigger>
+              <TabsTrigger value="techniques">Techniques</TabsTrigger>
+              <TabsTrigger value="impact">Impact Metrics</TabsTrigger>
+            </TabsList>
 
-            <div className="space-y-2">
-              <h4 className="font-medium">Best Practices</h4>
-              <ul className="space-y-2">
-                {(currentIndustry?.decision_hygiene as any)?.best_practices?.map((practice: string, index: number) => (
-                  <li key={index} className="flex items-start text-sm text-muted-foreground">
-                    <span className="mr-2">•</span>
-                    <span>{practice}</span>
-                  </li>
+            <TabsContent value="checklists" className="space-y-4">
+              <Accordion type="single" collapsible className="w-full">
+                {decision_hygiene?.checklists?.map((checklist: any, index: number) => (
+                  <AccordionItem key={index} value={`checklist-${index}`}>
+                    <AccordionTrigger className="text-left">
+                      <div className="flex items-center space-x-2">
+                        <span>{checklist.title}</span>
+                        <Info className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="space-y-2 p-4">
+                        <p className="text-sm text-muted-foreground mb-2">{checklist.description}</p>
+                        <ul className="space-y-2">
+                          {checklist.items.map((item: string, itemIndex: number) => (
+                            <li key={itemIndex} className="flex items-start text-sm">
+                              <span className="mr-2">•</span>
+                              <span>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
                 ))}
-              </ul>
-            </div>
+              </Accordion>
+            </TabsContent>
 
-            <div className="space-y-2">
-              <h4 className="font-medium">Impact Metrics</h4>
+            <TabsContent value="techniques" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Object.entries(decision_hygiene?.techniques || {}).map(([key, technique]: [string, any]) => (
+                  <Card key={key} className="p-4">
+                    <h4 className="font-medium mb-2">{key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</h4>
+                    <p className="text-sm text-muted-foreground">{technique.description}</p>
+                    {technique.examples?.length > 0 && (
+                      <ul className="mt-2 space-y-1">
+                        {technique.examples.map((example: string, index: number) => (
+                          <li key={index} className="text-sm">• {example}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="impact" className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {(currentIndustry?.decision_hygiene as any)?.impact_metrics?.map((impact: any, index: number) => (
+                {decision_hygiene?.impact_metrics?.map((impact: any, index: number) => (
                   <Card key={index} className="p-4">
                     <div className="text-center">
                       <div className="text-2xl font-bold">{impact.value}%</div>
-                      <div className="text-sm text-muted-foreground">{impact.metric}</div>
+                      <div className="text-sm font-medium">{impact.metric}</div>
+                      <div className="text-xs text-muted-foreground mt-1">{impact.description}</div>
                     </div>
                   </Card>
                 ))}
               </div>
-            </div>
-          </div>
+            </TabsContent>
+          </Tabs>
         </Card>
       </div>
     </div>
