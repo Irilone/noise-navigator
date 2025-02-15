@@ -13,21 +13,35 @@ type IndustryInsight = Database['public']['Tables']['industry_insights']['Row'];
 const NoiseAnalysis = () => {
   const [selectedIndustryId, setSelectedIndustryId] = useState<string>('legal');
 
-  // Fetch all industries
-  const { data: industries, isLoading } = useQuery({
+  // Fetch all industries with enhanced logging
+  const { data: industries, isLoading, error } = useQuery({
     queryKey: ['industries'],
     queryFn: async () => {
+      console.log('Fetching industries from Supabase...');
       const { data, error } = await supabase
         .from('industry_insights')
         .select('*');
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching industries:', error);
+        throw error;
+      }
+
+      console.log('Successfully fetched industries:', data);
       return data as IndustryInsight[];
     }
   });
 
+  // Log current industry data for debugging
   const currentIndustry = industries?.find(i => i.industry_id === selectedIndustryId);
+  console.log('Current industry:', currentIndustry);
+
   const metrics = Array.isArray(currentIndustry?.metrics) ? currentIndustry.metrics : [];
+
+  if (error) {
+    console.error('Error in NoiseAnalysis:', error);
+    return <div className="w-full max-w-4xl mx-auto p-6">Error loading data</div>;
+  }
 
   if (isLoading) {
     return <div className="w-full max-w-4xl mx-auto p-6">Loading...</div>;
